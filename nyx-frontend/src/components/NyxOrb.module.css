@@ -1,0 +1,66 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.orb {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--orb-color);
+  transition: background var(--transition-slow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Anel externo — aparece quando há atividade */
+.orb::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 1px solid var(--orb-color);
+  opacity: 0;
+  transition: opacity var(--transition-slow), border-color var(--transition-slow);
+}
+
+.pulse::before {
+  opacity: 0.35;
+}
+
+/* Núcleo interno */
+.inner {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.85);
+  transition: background var(--transition-slow);
+}
+
+/* Animação de pulso — só quando ativo */
+@keyframes orb-pulse {
+  0%, 100% { transform: scale(1);    opacity: 0.35; }
+  50%       { transform: scale(1.15); opacity: 0.15; }
+}
+
+.pulse::before {
+  animation: orb-pulse 2s ease-in-out infinite;
+}
+
+/* Animação de rotação para estado "thinking" */
+@keyframes orb-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.label {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+  font-weight: 400;
+}
