@@ -1,0 +1,55 @@
+:root {
+  /* Base */
+  --bg-base:     #0A0C10;
+  --bg-surface:  #1A1D27;
+  --bg-elevated: #222538;
+  --border:      #2D3148;
+  --border-soft: #1E2130;
+
+  /* Acento NYX — violeta frio */
+  --nyx:         #8B7CF6;
+  --nyx-dim:     #4A3F8A;
+  --nyx-soft:    #C4B5FD;
+  --nyx-glow:    rgba(139, 124, 246, 0.15);
+
+  /* Texto */
+  --text-primary:   #E8E6F0;
+  --text-secondary: #6E6A85;
+  --text-muted:     #3D3A52;
+
+  /* Estado */
+  --state-idle:       #3D3A52;
+  --state-listening:  #4A90D9;
+  --state-thinking:   #8B7CF6;
+  --state-tool:       #F0A050;
+  --state-responding: #52C48A;
+  --state-error:      #E05C5C;
+
+  /* Tipografia */
+  --font-ui:   'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* Escala de tipo */
+  --text-xs:   11px;
+  --text-sm:   13px;
+  --text-base: 15px;
+  --text-lg:   18px;
+  --text-xl:   24px;
+
+  /* Espaçamento */
+  --space-xs:  4px;
+  --space-sm:  8px;
+  --space-md:  16px;
+  --space-lg:  24px;
+  --space-xl:  40px;
+
+  /* Raios */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+
+  /* Transições */
+  --transition-fast:   0.12s ease;
+  --transition-normal: 0.22s ease;
+  --transition-slow:   0.4s ease;
+}

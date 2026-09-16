@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+.env
+*.pyc
+node_modules/
+dist/
+build/
+desktop.ini
+System Volume Information/
+nyx_memory.db
+*.db
+*.sqlite
+*.sqlite3
+nyx-frontend-src.tar.gz
