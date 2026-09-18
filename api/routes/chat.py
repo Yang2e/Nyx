@@ -1,9 +1,9 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 from typing import Optional, List
 import uuid
 from backend.memory.sqlite import MemoryManager
-from backend.llm.provider import OllamaProvider
+from backend.llm.provider import OllamaProvider, OllamaConnectionError
 from backend.llm.tools import web_search
 
 router = APIRouter(tags=["chat"])
@@ -25,7 +25,6 @@ async def chat_endpoint(request: ChatRequest):
     
     memory.save_message(conv_id, "user", request.message)
     
-    # 1. Palavras de busca expandidas
     search_context = ""
     keywords = ["quem é", "o que é", "notícia", "últimas", "quanto custa", "pesquise", "busca", "receita"]
     if any(keyword in request.message.lower() for keyword in keywords):
@@ -35,7 +34,6 @@ async def chat_endpoint(request: ChatRequest):
     history = memory.get_history(conv_id)
     formatted_history = "\n".join([f"{role}: {content}" for role, content in history])
     
-    # 2. System Prompt explicitando a função da NYX
     system_instruction = (
         "Você é a NYX, uma assistente virtual útil e direta. "
         "Responda à solicitação do usuário de forma completa e clara.\n\n"
@@ -43,11 +41,18 @@ async def chat_endpoint(request: ChatRequest):
     
     full_prompt_input = f"{system_instruction}{formatted_history}{search_context}"
     
-    response_text = await llm.generate_response(full_prompt_input)
+    try:
+        response_text = await llm.generate_response(full_prompt_input)
+    except OllamaConnectionError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"[Erro de Conexão Ollama]: O motor de IA está indisponível. Detalhe: {str(e)}"
+        )
     
     memory.save_message(conv_id, "assistant", response_text)
     
     return ChatResponse(response=response_text, conversation_id=conv_id)
+
 @router.get("/conversations", response_model=List[str])
 async def list_conversations():
     return memory.get_all_conversations()
