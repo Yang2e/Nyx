@@ -1,15 +1,15 @@
-from fastapi import APIRouter, HTTPException, status
+import os
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import Optional, List
-import uuid
+from typing import Optional, List, Dict
+
 from backend.memory.sqlite import MemoryManager
-from backend.llm.provider import OllamaProvider, OllamaConnectionError
-from backend.llm.tools import web_search
+from backend.llm.provider import OllamaProvider
+from backend.core.states import NyxState, get_orb_state
 
-router = APIRouter(tags=["chat"])
-
-memory = MemoryManager()
-llm = OllamaProvider()
+router = APIRouter()
+memory_manager = MemoryManager()
+llm_provider = OllamaProvider()
 
 class ChatRequest(BaseModel):
     message: str
@@ -18,41 +18,35 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     response: str
     conversation_id: str
+    state: str
 
-@router.post("/", response_model=ChatResponse)
-async def chat_endpoint(request: ChatRequest):
-    conv_id = request.conversation_id or str(uuid.uuid4())
-    
-    memory.save_message(conv_id, "user", request.message)
-    
-    search_context = ""
-    keywords = ["quem é", "o que é", "notícia", "últimas", "quanto custa", "pesquise", "busca", "receita"]
-    if any(keyword in request.message.lower() for keyword in keywords):
-        search_results = await web_search(request.message)
-        search_context = f"\nContexto extra da web:\n{search_results}\n"
+@router.post("/chat/", response_model=ChatResponse)
+def chat_endpoint(payload: ChatRequest):
+    conv_id = payload.conversation_id
+    if not conv_id:
+        conv_id = memory_manager.create_conversation()
+    else:
+        memory_manager.create_conversation(conv_id)
 
-    history = memory.get_history(conv_id)
-    formatted_history = "\n".join([f"{role}: {content}" for role, content in history])
-    
-    system_instruction = (
-        "Você é a NYX, uma assistente virtual útil e direta. "
-        "Responda à solicitação do usuário de forma completa e clara.\n\n"
-    )
-    
-    full_prompt_input = f"{system_instruction}{formatted_history}{search_context}"
-    
+    # Salva mensagem do usuário
+    memory_manager.add_message(conv_id, "user", payload.message)
+
+    # Recupera histórico da conversa
+    history = memory_manager.get_history(conv_id)
+
     try:
-        response_text = await llm.generate_response(full_prompt_input)
-    except OllamaConnectionError as e:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"[Erro de Conexão Ollama]: O motor de IA está indisponível. Detalhe: {str(e)}"
-        )
-    
-    memory.save_message(conv_id, "assistant", response_text)
-    
-    return ChatResponse(response=response_text, conversation_id=conv_id)
+        # Envia histórico para o LLM
+        response_text = llm_provider.generate(history)
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Ollama indisponível: {str(e)}")
 
-@router.get("/conversations", response_model=List[str])
-async def list_conversations():
-    return memory.get_all_conversations()
+    # Salva resposta do assistente
+    memory_manager.add_message(conv_id, "assistant", response_text)
+
+    current_state = get_orb_state()
+
+    return ChatResponse(
+        response=response_text,
+        conversation_id=conv_id,
+        state=current_state.value if hasattr(current_state, "value") else str(current_state)
+    )
