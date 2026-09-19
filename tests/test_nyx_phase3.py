@@ -1,91 +1,107 @@
 import os
 import pytest
-from fastapi.testclient import TestClient
-from unittest.mock import patch
+from unittest.mock import patch, AsyncMock
 
-from main import app
 from backend.memory.sqlite import MemoryManager
 from backend.llm.provider import OllamaProvider
 
-@pytest.fixture
-def temp_db(tmp_path):
-    db_file = tmp_path / "test_nyx.db"
-    return str(db_file)
 
-def test_1_create_conversation(temp_db):
-    memory = MemoryManager(db_path=temp_db)
-    conv_id = memory.create_conversation()
+@pytest.fixture
+def temp_memory(tmp_path):
+    """Fixture para criar um MemoryManager isolado usando um banco SQLite temporário."""
+    db_file = tmp_path / "nyx_test_memory.db"
+    return MemoryManager(db_path=str(db_file))
+
+
+def test_1_criacao(temp_memory):
+    """TESTE 1 — criação: Verifica se create_conversation() gera um conversation_id válido."""
+    conv_id = temp_memory.create_conversation()
     assert conv_id is not None
+    assert isinstance(conv_id, str)
     assert len(conv_id) > 0
 
-def test_2_persistence(temp_db):
-    memory = MemoryManager(db_path=temp_db)
-    conv_id = memory.create_conversation()
-    memory.add_message(conv_id, "user", "Olá, NYX")
-    history = memory.get_history(conv_id)
+
+def test_2_persistencia(temp_memory):
+    """TESTE 2 — persistência: Cria conversa, adiciona mensagem e recupera o histórico."""
+    conv_id = temp_memory.create_conversation()
+    temp_memory.add_message(conv_id, "user", "Olá, NYX!")
+    
+    history = temp_memory.get_history(conv_id)
     assert len(history) == 1
     assert history[0]["role"] == "user"
-    assert history[0]["content"] == "Olá, NYX"
+    assert history[0]["content"] == "Olá, NYX!"
 
-def test_3_history_order(temp_db):
-    memory = MemoryManager(db_path=temp_db)
-    conv_id = memory.create_conversation()
-    memory.add_message(conv_id, "user", "Olá")
-    memory.add_message(conv_id, "assistant", "Olá! Como posso ajudar?")
-    memory.add_message(conv_id, "user", "Qual é meu nome?")
+
+def test_3_ordem(temp_memory):
+    """TESTE 3 — ordem: Confirma que get_history() retorna na ordem correta (user -> assistant -> user -> assistant)."""
+    conv_id = temp_memory.create_conversation()
+    temp_memory.add_message(conv_id, "user", "Pergunta 1")
+    temp_memory.add_message(conv_id, "assistant", "Resposta 1")
+    temp_memory.add_message(conv_id, "user", "Pergunta 2")
+    temp_memory.add_message(conv_id, "assistant", "Resposta 2")
+
+    history = temp_memory.get_history(conv_id)
+    assert len(history) == 4
+    assert history[0] == {"role": "user", "content": "Pergunta 1"}
+    assert history[1] == {"role": "assistant", "content": "Resposta 1"}
+    assert history[2] == {"role": "user", "content": "Pergunta 2"}
+    assert history[3] == {"role": "assistant", "content": "Resposta 2"}
+
+
+def test_4_continuidade(temp_memory):
+    """TESTE 4 — continuidade: Recupera o mesmo conversation_id e adiciona novas mensagens mantendo o histórico."""
+    conv_id = temp_memory.create_conversation()
+    temp_memory.add_message(conv_id, "user", "Meu nome é Lucas")
+    temp_memory.add_message(conv_id, "assistant", "Prazer, Lucas!")
+
+    # Simula continuidade usando o mesmo conversation_id
+    temp_memory.add_message(conv_id, "user", "Qual é meu nome?")
     
-    history = memory.get_history(conv_id)
+    history = temp_memory.get_history(conv_id)
     assert len(history) == 3
-    assert history[0] == {"role": "user", "content": "Olá"}
-    assert history[1] == {"role": "assistant", "content": "Olá! Como posso ajudar?"}
-    assert history[2] == {"role": "user", "content": "Qual é meu nome?"}
+    assert history[0]["content"] == "Meu nome é Lucas"
+    assert history[1]["content"] == "Prazer, Lucas!"
+    assert history[2]["content"] == "Qual é meu nome?"
 
-def test_4_continuity(temp_db):
-    memory = MemoryManager(db_path=temp_db)
-    conv_id = "conv-persistente-123"
-    memory.add_message(conv_id, "user", "Meu nome é Teste")
-    
-    # Simula continuidade recuperando no mesmo ID
-    memory.add_message(conv_id, "assistant", "Prazer, Teste!")
-    history = memory.get_history(conv_id)
-    assert len(history) == 2
-    assert history[0]["content"] == "Meu nome é Teste"
-    assert history[1]["content"] == "Prazer, Teste!"
 
-def test_5_isolation(temp_db):
-    memory = MemoryManager(db_path=temp_db)
-    conv_a = "conversation_A"
-    conv_b = "conversation_B"
-    
-    memory.add_message(conv_a, "user", "Mensagem da A")
-    memory.add_message(conv_b, "user", "Mensagem da B")
-    
-    history_a = memory.get_history(conv_a)
-    history_b = memory.get_history(conv_b)
-    
+def test_5_isolamento(temp_memory):
+    """TESTE 5 — isolamento: Confirma que a conversa A não contém mensagens de B e vice-versa."""
+    conv_a = temp_memory.create_conversation()
+    conv_b = temp_memory.create_conversation()
+
+    temp_memory.add_message(conv_a, "user", "Mensagem exclusiva da conversa A")
+    temp_memory.add_message(conv_b, "user", "Mensagem exclusiva da conversa B")
+
+    history_a = temp_memory.get_history(conv_a)
+    history_b = temp_memory.get_history(conv_b)
+
     assert len(history_a) == 1
-    assert history_a[0]["content"] == "Mensagem da A"
-    
+    assert history_a[0]["content"] == "Mensagem exclusiva da conversa A"
+
     assert len(history_b) == 1
-    assert history_b[0]["content"] == "Mensagem da B"
+    assert history_b[0]["content"] == "Mensagem exclusiva da conversa B"
 
-def test_6_new_conversation_no_inheritance(temp_db):
-    memory = MemoryManager(db_path=temp_db)
-    conv_1 = memory.create_conversation()
-    memory.add_message(conv_1, "user", "Segredo da conversa 1")
-    
-    conv_2 = memory.create_conversation()
-    history_2 = memory.get_history(conv_2)
-    assert len(history_2) == 0
 
-def test_7_ollama_api_url_env():
-    with patch.dict(os.environ, {"OLLAMA_API_URL": "http://192.168.15.21:11434/api/generate"}):
+def test_6_conversa_nova(temp_memory):
+    """TESTE 6 — conversa nova: Confirma que uma nova conversa começa totalmente vazia."""
+    conv_a = temp_memory.create_conversation()
+    temp_memory.add_message(conv_a, "user", "Dado importante da conversa A")
+
+    conv_b = temp_memory.create_conversation()
+    history_b = temp_memory.get_history(conv_b)
+
+    assert len(history_b) == 0
+
+
+def test_7_ollama_api_url():
+    """TESTE 7 — OLLAMA_API_URL: Verifica se o provedor respeita a variável de ambiente e o fallback padrão."""
+    custom_url = "http://192.168.15.21:11434/api/generate"
+    with patch.dict(os.environ, {"OLLAMA_API_URL": custom_url}):
         provider = OllamaProvider()
-        assert provider.api_url == "http://192.168.15.21:11434/api/generate"
+        assert provider.api_url == custom_url
 
-    # Teste de fallback padrão
+    # Testa fallback padrão quando a variável não está definida
     with patch.dict(os.environ, {}, clear=True):
-        # Remove a variável se existir no ambiente de teste
         env_backup = os.environ.pop("OLLAMA_API_URL", None)
         try:
             provider = OllamaProvider()
@@ -94,7 +110,10 @@ def test_7_ollama_api_url_env():
             if env_backup:
                 os.environ["OLLAMA_API_URL"] = env_backup
 
-def test_8_ollama_model_env():
-    with patch.dict(os.environ, {"OLLAMA_MODEL": "llama3:latest"}):
+
+def test_8_ollama_model():
+    """TESTE 8 — OLLAMA_MODEL: Verifica se a variável OLLAMA_MODEL é respeitada pela implementação existente."""
+    custom_model = "llama3:latest"
+    with patch.dict(os.environ, {"OLLAMA_MODEL": custom_model}):
         provider = OllamaProvider()
-        assert provider.model == "llama3:latest"
+        assert provider.model == custom_model
