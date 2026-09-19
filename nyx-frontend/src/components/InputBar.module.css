@@ -1,27 +1,100 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+/* Console: caixa quase reta, prompt ">" e colchetes de foco nos cantos */
 .bar {
+  position: relative;
   display: flex;
   align-items: flex-end;
-  gap: var(--space-sm);
-  background: var(--bg-surface);
+  gap: 12px;
+  background: rgba(26, 29, 39, 0.55);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-sm) var(--space-sm) var(--space-sm) var(--space-md);
-  transition: border-color var(--transition-fast);
+  border-radius: var(--radius-sm);
+  padding: 10px 10px 10px 14px;
+  transition: border-color var(--transition-normal), background var(--transition-normal);
+}
+
+.bar:hover {
+  border-color: #3A3F5C;
 }
 
 .bar:focus-within {
   border-color: var(--nyx-dim);
+  background: rgba(26, 29, 39, 0.8);
 }
+
+/* Colchetes — "travam" ao redor do console quando ele recebe foco */
+.bar::before {
+  content: '';
+  position: absolute;
+  inset: -9px;
+  pointer-events: none;
+  opacity: 0;
+  border: 1px solid var(--nyx-soft);
+  transition: inset 0.28s var(--ease-out), opacity var(--transition-normal);
+
+  -webkit-mask-image:
+    linear-gradient(#000, #000), linear-gradient(#000, #000),
+    linear-gradient(#000, #000), linear-gradient(#000, #000);
+  mask-image:
+    linear-gradient(#000, #000), linear-gradient(#000, #000),
+    linear-gradient(#000, #000), linear-gradient(#000, #000);
+  -webkit-mask-size: 9px 9px;
+  mask-size: 9px 9px;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: 0 0, 100% 0, 0 100%, 100% 100%;
+  mask-position: 0 0, 100% 0, 0 100%, 100% 100%;
+}
+
+.bar:focus-within::before {
+  inset: -4px;
+  opacity: 0.85;
+}
+
+/* Aguardando resposta: linha de varredura na borda inferior */
+.busy::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  width: 30%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--nyx), transparent);
+  animation: sweep 1.6s linear infinite;
+}
+
+@keyframes sweep {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(340%); }
+}
+
+.prompt {
+  font-family: var(--font-mono);
+  font-size: var(--text-base);
+  line-height: 28px;
+  color: var(--nyx);
+  user-select: none;
+  transition: color var(--transition-normal);
+}
+
+.bar:focus-within .prompt { color: var(--nyx-soft); }
+.busy .prompt { color: var(--text-faint); }
 
 .input {
   flex: 1;
+  min-width: 0;
   background: none;
   border: none;
   color: var(--text-primary);
+  caret-color: var(--nyx-soft);
   font-size: var(--text-base);
   line-height: 1.6;
   resize: none;
-  min-height: 24px;
+  min-height: 28px;
   max-height: 140px;
   padding: 2px 0;
 }
@@ -31,31 +104,72 @@
 }
 
 .input:disabled {
-  opacity: 0.5;
+  opacity: 0.6;
 }
 
 .send {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: var(--border);
-  color: var(--text-muted);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: background var(--transition-fast), color var(--transition-fast), transform var(--transition-fast);
+  height: 32px;
+  min-width: 32px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast),
+    border-color var(--transition-fast),
+    transform var(--transition-fast);
 }
 
+.sendIcon { display: none; }
+
 .send.active {
-  background: var(--nyx);
-  color: white;
+  color: var(--nyx-soft);
+  border-color: var(--nyx-dim);
+  background: rgba(139, 124, 246, 0.1);
 }
 
 .send.active:hover {
-  transform: scale(1.05);
+  background: rgba(139, 124, 246, 0.2);
+  border-color: var(--nyx);
+}
+
+.send.active:active {
+  transform: translateY(1px);
 }
 
 .send:disabled {
   cursor: not-allowed;
+}
+
+.hint {
+  padding-left: 2px;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  opacity: 0;
+  transition: opacity var(--transition-normal);
+}
+
+.hint span { color: var(--text-secondary); }
+.hint .hintGap { margin-left: var(--space-md); }
+
+.wrap:focus-within .hint { opacity: 0.85; }
+
+@media (hover: none) {
+  .hint { display: none; }
+}
+
+@media (max-width: 600px) {
+  .bar { padding: 8px 8px 8px 12px; }
+  .send { padding: 0; width: 34px; }
+  .sendLabel { display: none; }
+  .sendIcon { display: block; }
 }

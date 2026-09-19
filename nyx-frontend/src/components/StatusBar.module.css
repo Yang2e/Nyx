@@ -1,29 +1,67 @@
 .bar {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-md) var(--space-lg);
+  height: 52px;
+  padding: 0 var(--space-lg);
   border-bottom: 1px solid var(--border-soft);
   flex-shrink: 0;
 }
 
+/* Segmento de estado: acompanha o Orb na linha inferior do cabeçalho */
+.bar::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  width: 64px;
+  height: 1px;
+  background: var(--state-idle);
+  opacity: 0.6;
+  transition: background var(--transition-slow), opacity var(--transition-slow);
+}
+
+.bar[data-state='listening']::after   { background: var(--state-listening);  opacity: 1; }
+.bar[data-state='thinking']::after   { background: var(--state-thinking);   opacity: 1; animation: sweep 2.4s ease-in-out infinite alternate; }
+.bar[data-state='tool']::after       { background: var(--state-tool);       opacity: 1; animation: sweep 2s steps(12, end) infinite alternate; }
+.bar[data-state='responding']::after { background: var(--state-responding); opacity: 1; animation: sweep 1.4s ease-in-out infinite alternate; }
+.bar[data-state='error']::after      { background: var(--state-error);      opacity: 1; }
+
+/* % no translateX é relativo ao próprio segmento (64px): 400% ≈ 256px de curso */
+@keyframes sweep {
+  from { transform: translateX(0); }
+  to   { transform: translateX(400%); }
+}
+
 .identity {
   display: flex;
-  align-items: baseline;
-  gap: var(--space-sm);
+  align-items: center;
+  gap: 10px;
+}
+
+.mark {
+  width: 28px;
+  height: auto;
+  display: block;
+  opacity: 0.9;
+  user-select: none;
 }
 
 .name {
-  font-size: var(--text-xl);
+  font-size: var(--text-base);
   font-weight: 500;
-  color: var(--nyx-soft);
-  letter-spacing: 0.12em;
+  color: var(--text-primary);
+  letter-spacing: 0.32em;
+  /* compensa o espaço final do letter-spacing */
+  margin-right: -0.32em;
 }
 
 .version {
   font-size: var(--text-xs);
   color: var(--text-muted);
   font-family: var(--font-mono);
+  padding-left: 2px;
 }
 
 .right {
@@ -32,23 +70,34 @@
   gap: var(--space-md);
 }
 
+/* Discreto: ponto minúsculo + texto mono em cinza */
 .connection {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  font-family: var(--font-mono);
   font-size: var(--text-xs);
-  color: var(--text-secondary);
+  color: var(--text-muted);
+  transition: color var(--transition-slow);
 }
 
 .dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
+  width: 5px;
+  height: 5px;
   flex-shrink: 0;
+  transition: background var(--transition-slow);
 }
 
-.online .dot  { background: var(--state-responding); }
+.online  .dot { background: var(--accent-blue); }
 .offline .dot { background: var(--state-error); }
+.offline      { color: var(--text-secondary); }
 
-.online  { color: var(--state-responding); }
-.offline { color: var(--state-error); }
+/* Em telas menores o olho já aparece na faixa de presença abaixo */
+@media (max-width: 860px) {
+  .mark { display: none; }
+}
+
+@media (max-width: 600px) {
+  .bar { padding: 0 var(--space-md); }
+  .version { display: none; }
+}

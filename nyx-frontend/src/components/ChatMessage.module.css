@@ -1,80 +1,111 @@
+/* Cada mensagem é uma entrada de log: linha lateral + nó de origem + metadados.
+   NYX = nó preenchido, linha violeta que esmaece. Você = nó vazado, linha neutra. */
+
 .row {
+  position: relative;
+  padding: var(--space-sm) 0 var(--space-md) 22px;
+  animation: entry-in 0.32s var(--ease-out) both;
+}
+
+/* linha lateral */
+.row::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 6px;
+  width: 1px;
+  background: var(--border);
+  transform-origin: top;
+  animation: rule-draw 0.55s var(--ease-out) both;
+  transition: background var(--transition-normal);
+}
+
+/* nó de origem */
+.row::after {
+  content: '';
+  position: absolute;
+  left: -2px;
+  top: 12px;
+  width: 5px;
+  height: 5px;
+  background: var(--bg-base);
+  border: 1px solid var(--text-muted);
+  transition: background var(--transition-normal), border-color var(--transition-normal);
+}
+
+.nyx::before {
+  background: linear-gradient(to bottom, var(--nyx) 0%, var(--nyx-dim) 45%, transparent 100%);
+}
+
+.nyx::after {
+  background: var(--nyx);
+  border-color: var(--nyx);
+}
+
+.user:hover::before { background: var(--text-faint); }
+.user:hover::after  { border-color: var(--text-secondary); }
+
+/* metadados */
+.meta {
   display: flex;
-  gap: var(--space-md);
-  align-items: flex-start;
-  padding: var(--space-sm) 0;
-}
-
-.user {
-  flex-direction: row-reverse;
-}
-
-.avatar {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: var(--nyx-dim);
-  color: var(--nyx-soft);
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 6px;
+  font-family: var(--font-mono);
   font-size: var(--text-xs);
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  margin-top: 2px;
+  line-height: 1.4;
 }
 
-.bubble {
-  max-width: 72%;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
+.origin { color: var(--text-secondary); }
+.nyx .origin { color: var(--nyx-soft); }
+
+.time {
+  color: var(--text-muted);
+  opacity: 0.65;
+  transition: opacity var(--transition-normal);
 }
 
-.user .bubble {
-  align-items: flex-end;
-}
+.row:hover .time { opacity: 1; }
 
+/* corpo */
 .text {
+  max-width: 68ch;
   font-size: var(--text-base);
-  line-height: 1.65;
+  line-height: 1.7;
   color: var(--text-primary);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
-.nyx .text {
-  color: var(--text-primary);
-}
-
-.user .text {
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md) var(--radius-sm) var(--radius-md) var(--radius-md);
-  padding: var(--space-sm) var(--space-md);
-  color: var(--text-primary);
-}
-
-.nyx .text {
-  padding: var(--space-xs) 0;
-}
+.user .text { color: var(--text-user); }
 
 /* Badge de ferramenta */
 .toolBadge {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 2px 8px;
+  font-family: var(--font-mono);
   font-size: var(--text-xs);
   color: var(--state-tool);
-  font-family: var(--font-mono);
-  padding: 3px 8px;
-  background: rgba(240, 160, 80, 0.08);
-  border: 1px solid rgba(240, 160, 80, 0.2);
+  border: 1px solid rgba(214, 161, 92, 0.28);
   border-radius: var(--radius-sm);
-  margin-bottom: 4px;
 }
 
 .toolDot {
   width: 5px;
   height: 5px;
-  border-radius: 50%;
   background: var(--state-tool);
+}
+
+@keyframes entry-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes rule-draw {
+  from { transform: scaleY(0); }
+  to   { transform: scaleY(1); }
 }
